@@ -1,12 +1,16 @@
-from fastapi import FastAPI, Response, status, HTTPException
+from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
 from pydantic import BaseModel
 from typing import Optional
 from random import randrange
 import psycopg
-# from psycopg2.extras import RealDictCursor
+from sqlalchemy.orm import Session
 import time
+from . import models
+from . import models
+from .database import engine, SessionLocal, get_db
 
+models.Base.metadata.create_all(bind=engine)
 
 app =  FastAPI()
 
@@ -40,31 +44,40 @@ def find_index_post(id):
     for i, p in enumerate(my_posts):
         if p['id'] == id:
             return i 
-        
+
+# @app.get("/sqlalchemy")
+# def test_posts(db: Session = Depends(get_db)):
+#     posts = db.query(models.Post).all()
+#     return {"status": "success", "data": posts}       
 
 @app.get("/posts")
-def get_posts():
-    cursor.execute("""SELECT * FROM posts""")
-    posts = cursor.fetchall()
-    print("is it working") 
+def get_posts(db: Session = Depends(get_db)):
+    posts = db.query(models.Post).all()
+    # cursor.execute("""SELECT * FROM posts""")
+    # posts = cursor.fetchall()
     print(posts)
     return {"message": "successfully retrived", "data":posts}
 
 @app.post("/posts", status_code= status.HTTP_201_CREATED)
-def create_post(post: PostModel):
-    cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s,%s,%s) RETURNING *""",
-                   (post.title, post.content, post.published))
-    new_posts = cursor.fetchone()
-    conn.commit()
-    
+def create_post(post: PostModel, db: Session = Depends(get_db)):
+   
+    # cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s,%s,%s) RETURNING *""",
+    #                (post.title, post.content, post.published))
+    # new_posts = cursor.fetchone()
+    # conn.commit() 
+    new_posts =  models.Post(**PostModel.dict())
+    db.add(new_posts)
+    db.commit()
+    db.refresh(new_posts)
     return {"message": "successfully created", "data": new_posts}
 
 
 @app.get("/posts/{id}")
-def get_post(id: int, respose:Response):
+def get_post(id: int,  db: Session = Depends(get_db)):
     print(id)
-    cursor.execute("""SELECT * FROM posts WHERE id = %s """,(str(id),))
-    post = cursor.fetchone()
+    # cursor.execute("""SELECT * FROM posts WHERE id = %s """,(str(id),))
+    # post = cursor.fetchone()
+    post = db.query(models.Post).filter(models.Post.id ==  id).first()
     if not post:
         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail=f"posts with the id: {id} does not exist")
     return {"message": "success", "data": post}
