@@ -14,9 +14,7 @@ from .routers import post, users, auth
 models.Base.metadata.create_all(bind=engine)
 
 app =  FastAPI()
-
-
-    
+   
 while True:
     try:
         conn =  psycopg.connect(host= 'localhost', dbname= 'fastapi', user='postgres', 
