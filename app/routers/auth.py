@@ -20,7 +20,7 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
-@router.post("/login", status_code= status.HTTP_201_CREATED, )
+@router.post("/login", status_code= status.HTTP_201_CREATED, response_model=schemas.Token)
 def login(user_credentials:OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     # hash the password = use.password
     user =  db.query(models.User).filter(models.User.email == user_credentials.username).first()
